@@ -1,111 +1,94 @@
 # 🔔 Notification System (C++)
 
-A simple C++ project that demonstrates how to design a notification system using object-oriented programming and common design patterns.
+A beginner-friendly C++ project demonstrating four object-oriented design patterns in a notification system.
 
-The example builds a notification message, adds formatting to it, and sends it through multiple channels such as Email, SMS, and Popup. A logger also observes new notifications.
+The program decorates a message with a timestamp and signature, then sends the formatted notification through Email, SMS, and Popup strategies. A logger observes the notification event.
 
-## ✨ Features
+## Features
 
-- **Multiple delivery channels:** Email, SMS, and Popup strategies.
-- **Dynamic message formatting:** Add a timestamp and signature without changing the original notification class.
-- **Observer-based updates:** Notify the logging and delivery components when a new notification is created.
-- **Central notification service:** A Singleton provides access to the notification service.
-- **Object-oriented design:** Uses interfaces, inheritance, and polymorphism to separate responsibilities.
+- Multiple delivery strategies: Email, SMS, and Popup
+- Dynamic message formatting with decorators
+- Observer-based notification updates
+- A central Singleton notification service
+- Interfaces, inheritance, and runtime polymorphism
 
-## 🧠 Design Patterns Used
+## Design Patterns Used
 
-| Pattern | Where it is used | Purpose |
+| Pattern | Classes | Purpose |
 | --- | --- | --- |
-| **Decorator** | `TimestampDecorator`, `SignatureDecorator` | Adds extra content to a notification dynamically. |
-| **Observer** | `NotificationObservable`, `Logger`, `NotificationEngine` | Notifies registered observers when a notification changes. |
-| **Strategy** | `INotificationStrategy`, `EmailStrategy`, `SMSStrategy`, `PopUpStrategy` | Allows the delivery channel to vary independently. |
-| **Singleton** | `NotificationService` | Provides one central service instance. |
+| **Decorator** | `INotificationDecorator`, `TimestampDecorator`, `SignatureDecorator` | Adds formatting to a notification without modifying the base notification class. |
+| **Observer** | `IObserver`, `IObservable`, `NotificationObservable`, `Logger`, `NotificationEngine` | Notifies registered observers when a notification is sent. |
+| **Strategy** | `INotificationStrategy`, `EmailStrategy`, `SMSStrategy`, `PopUpStrategy` | Separates notification content from the delivery channel. |
+| **Singleton** | `NotificationService` | Provides a central service instance. |
 
-## ⚙️ How It Works
+## How It Works
 
-1. The application creates a basic `SimpleNotification`.
-2. `TimestampDecorator` adds a timestamp to the message.
-3. `SignatureDecorator` adds a signature.
-4. The `NotificationService` passes the message to `NotificationObservable`.
-5. The observable notifies its registered observers.
-6. `Logger` prints the notification, while `NotificationEngine` sends it through each configured strategy.
+1. Create a `SimpleNotification` with the message `Your order has been shipped!`.
+2. Wrap it in a `TimestampDecorator`.
+3. Wrap that result in a `SignatureDecorator`.
+4. Register `Logger` and `NotificationEngine` as observers.
+5. Send the decorated notification through `NotificationService`.
+6. The logger prints the message, and the engine sends it through all configured strategies.
 
-### Example Message
+The timestamp is hard-coded in this demonstration; it does not read the current system time.
 
-The program uses the message `Your order has been shipped!`. Its formatted content is similar to:
+## Main Classes
 
-```text
-[2026-10-21 12:49:32] Your order has been shipped!
--- Customer Care
-```
+- **`INotification`** — interface for notification content.
+- **`SimpleNotification`** — stores the original message.
+- **`INotificationDecorator`** — base class for decorators and owns the wrapped notification.
+- **`TimestampDecorator` / `SignatureDecorator`** — add a timestamp and signature.
+- **`NotificationObservable`** — stores observer pointers and broadcasts updates.
+- **`INotificationStrategy`** — interface for delivery channels.
+- **`EmailStrategy` / `SMSStrategy` / `PopUpStrategy`** — console-based delivery strategies.
+- **`NotificationEngine`** — sends the notification through each configured strategy.
+- **`Logger`** — prints notification content for logging.
+- **`NotificationService`** — Singleton entry point for sending notifications.
 
-The timestamp in the current example is hard-coded; it does not automatically use the current system time.
+## Requirements
 
-## 🗂️ Main Classes
-
-- `INotification`: Interface for notification content.
-- `SimpleNotification`: Stores the original message.
-- `INotificationDecorator`: Base class for decorators.
-- `TimestampDecorator` and `SignatureDecorator`: Add extra message content.
-- `IObserver` and `IObservable`: Define the observer interfaces.
-- `NotificationObservable`: Stores the current notification and notifies observers.
-- `INotificationStrategy`: Interface for a delivery channel.
-- `EmailStrategy`, `SMSStrategy`, and `PopUpStrategy`: Demonstration delivery strategies.
-- `NotificationEngine`: Sends notification content through configured strategies.
-- `Logger`: Prints notification content for logging.
-- `NotificationService`: Central service used by the application.
-
-## 🛠️ Requirements
-
-- A C++ compiler such as **g++**
+- A C++ compiler such as g++
 - C++11 or later
+- No third-party libraries
 
-The project uses only standard C++ headers, so no third-party libraries are required.
+## Build and Run
 
-## 🚀 Build and Run
-
-Save the source code in a file named `main.cpp`, then run:
+Compile:
 
 ```bash
 g++ -std=c++11 -Wall -Wextra -pedantic main.cpp -o notification_system
 ```
 
-Run on Linux or macOS:
+Run on Linux/macOS:
 
 ```bash
 ./notification_system
 ```
 
-On Windows, if you use MinGW g++, run:
+Run on Windows with MinGW:
 
 ```powershell
 .\notification_system.exe
 ```
 
-## 📌 Important Notes
+## Important Memory-Ownership Warning
 
-- Email, SMS, and Popup strategies currently print to the console. They do **not** connect to real email or SMS providers.
-- The example is intended for learning design patterns and object-oriented design, not as a production notification service.
-- **Memory ownership needs improvement before extending the project.** In the supplied implementation, both `NotificationService` and `NotificationObservable` delete notification pointers, which can cause double deletion. The Singleton is also manually deleted while its static pointer remains set. Consider using `std::unique_ptr` and a function-local static Singleton, or otherwise define one clear owner for each object.
-- The observer list stores raw pointers. Observers should be detached or managed safely before they are destroyed.
+This version follows the raw-pointer implementation provided for the project, but **it currently has a double-delete bug**:
 
-## 🔮 Possible Improvements
+- `NotificationObservable` deletes `currentNotification` in its destructor.
+- `NotificationService` also deletes the same notification through its `notifications` vector.
+- In addition, `setNotification()` can delete a previous notification that is still stored in `notifications`.
 
-- Use `std::unique_ptr` to make object ownership explicit.
-- Generate timestamps from the system clock.
-- Add real email/SMS provider integrations behind the strategy interface.
-- Add unit tests for decorators, observer notifications, and delivery strategies.
-- Add validation and error handling for delivery failures.
+These overlapping ownership responsibilities can cause undefined behavior. The Singleton is also manually deleted while its static `instance` pointer is left non-null. Before using or extending this as a running application, fix ownership so each object has exactly one clear owner (for example, by redesigning around `std::unique_ptr` and a function-local static Singleton). The observer list also contains non-owning raw pointers, so observers must be detached before destruction.
 
-## 📚 Learning Goals
+Email, SMS, and Popup currently print to the console; they do not connect to real delivery providers.
 
-This project is useful for practicing:
+## Possible Improvements
 
-- Interfaces and abstract classes
-- Inheritance and runtime polymorphism
-- Composition and object ownership
-- The Decorator, Observer, Strategy, and Singleton patterns
-- Separation of responsibilities in C++
+- Make ownership safe and explicit with smart pointers.
+- Generate timestamps using the system clock.
+- Integrate actual email/SMS providers.
+- Add unit tests and delivery-failure handling.
 
 ---
 
